@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 namespace SerialIDTracker
 {
     [RunInstaller(true)]
-    public partial class Installer1 : System.Configuration.Install.Installer
+    public partial class Installer : System.Configuration.Install.Installer
     {
-        public Installer1()
+        public Installer()
         {
             InitializeComponent();
 
