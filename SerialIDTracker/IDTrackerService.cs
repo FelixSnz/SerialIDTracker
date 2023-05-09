@@ -8,11 +8,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Cognex.DataMan.SDK;
+using System.ComponentModel;
+using System.Configuration.Install;
 
 namespace SerialIDTracker
 {
     public partial class IdTrackerService : ServiceBase
     {
+
         public IdTrackerService()
         {
             InitializeComponent();
@@ -24,10 +27,13 @@ namespace SerialIDTracker
             {
                 SynchronizationContext _syncContext = SynchronizationContext.Current ?? new SynchronizationContext();
 
-                CognexScanner myCognexScanner = new CognexScanner(_syncContext);
-                NamedPipeServer namedPipeServer = new NamedPipeServer();
-                namedPipeServer.DataReceived += MessageHandler.OnMessageReceived;
-                namedPipeServer.Start();
+                
+                CognexScanner cognexScanner = new CognexScanner(_syncContext);
+
+
+                cognexScanner.DataScanned += Producer.OnDataScanned;
+                
+
                 
                 if (args.Length > 0)
                 {
@@ -36,12 +42,12 @@ namespace SerialIDTracker
                     int defaultPort = 23; // Replace 23 with the default port number for your device.
                     Console.WriteLine($"Connecting to the specified IP address: {ipAddress}:{defaultPort}");
 
-                    myCognexScanner.ConnectByIp(ipAddress, defaultPort);
+                    cognexScanner.ConnectByIp(ipAddress, defaultPort);
                 }
                 else
                 {
                     // If an IP address is not provided, use the existing discovery mechanism.
-                    myCognexScanner.DiscoverDevice();
+                    cognexScanner.DiscoverDevice();
                     Console.WriteLine("Discovering systems. Press any key to exit...");
                 }
 
@@ -62,6 +68,7 @@ namespace SerialIDTracker
 
         protected override void OnStop()
         {
+            this.Stop();
         }
     }
 }

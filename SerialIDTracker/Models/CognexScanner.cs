@@ -23,6 +23,8 @@ namespace SerialIDTracker.Models
 
         private static SynchronizationContext _syncContext = null;
 
+        public event EventHandler<string> DataScanned;
+
         //public static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
 
@@ -95,7 +97,7 @@ namespace SerialIDTracker.Models
             }, null);
         }
 
-        public static void InitializeSystem()
+        public void InitializeSystem()
         {
             if (Singleton.Instance.IsClosing || Singleton.Instance.System != null || Singleton.Instance.Connector == null)
                 return;
@@ -150,7 +152,7 @@ namespace SerialIDTracker.Models
             }, null);
         }
 
-        private static void Results_ComplexResultCompleted(object sender, ComplexResult e)
+        private void Results_ComplexResultCompleted(object sender, ComplexResult e)
         {
             _syncContext.Post(delegate
             {
@@ -166,7 +168,7 @@ namespace SerialIDTracker.Models
             }, null);
         }
 
-        private static void AbstractResults(ComplexResult complexResult)
+        private void AbstractResults(ComplexResult complexResult)
         {
             List<string> imageGraphics = new List<string>();
             string readResult = null;
@@ -201,6 +203,7 @@ namespace SerialIDTracker.Models
 
             if (readResult != null)
             {
+                DataScanned?.Invoke(this, readResult);
                 Console.WriteLine($"Complex result arrived: resultId = {resultId}, read result = {readResult}");
                 Console.WriteLine($"Complex result contains {collectedResults.ToString()}");
             }

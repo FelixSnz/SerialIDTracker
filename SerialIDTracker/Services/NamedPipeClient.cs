@@ -1,59 +1,36 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO.Pipes;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace SerialIDTracker.Services
 {
-    class NamedPipeClient
+    public class NamedPipeClient : IDisposable
     {
-        private const string PipeName = "SerialTrackerService";
-        private const int BufferSize = 4096;
+        private readonly NamedPipeClientStream client;
 
-        public void Connect()
+        public NamedPipeClient(string pipeName)
         {
-            using (NamedPipeClientStream pipeClient = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut))
-            {
-                try
-                {
-                    Console.WriteLine("Connecting to named pipe server...");
-                    pipeClient.Connect(5000);
-                    Console.WriteLine("Connected to named pipe server.");
-
-                    string messageToSend = "Hello, Named Pipe Server!";
-                    SendMessage(pipeClient, messageToSend);
-                    Console.WriteLine("acabao");
-
-                    //uncomment when handshake implemented
-                    //string receivedMessage = ReceiveMessage(pipeClient);
-                    //Console.WriteLine($"Received message: {receivedMessage}");
-
-                }
-                catch (TimeoutException e)
-                {
-                    //MessageBox.Show($"error de espera, no se encontro servidor {PipeName}: {e.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    //Application.exi
-                    //Console.WriteLine();
-                }
-
-            }
+            client = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.None);
+            client.Connect();
         }
 
-        private void SendMessage(NamedPipeClientStream pipeClient, string message)
+        public void Send(string message)
         {
-            byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-            pipeClient.Write(messageBytes, 0, messageBytes.Length);
-            Console.WriteLine($"Sent message: {message}");
+            byte[] data = Encoding.UTF8.GetBytes(message);
+            client.Write(data, 0, data.Length);
         }
 
-        private string ReceiveMessage(NamedPipeClientStream pipeClient)
+        public string Receive()
         {
-            byte[] buffer = new byte[BufferSize];
-            int bytesRead = pipeClient.Read(buffer, 0, buffer.Length);
-            return Encoding.UTF8.GetString(buffer, 0, bytesRead);
+            byte[] buffer = new byte[1024];
+            int bytesRead = client.Read(buffer, 0, buffer.Length);
+            string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+            return message;
+        }
+
+        public void Dispose()
+        {
+            client.Dispose();
         }
     }
 }
