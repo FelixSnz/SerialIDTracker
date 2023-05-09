@@ -43,7 +43,9 @@
       <HintPath>..\packages\Cognex.DataMan.SDK.Utils.PC.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration.Install" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Management" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -59,11 +61,18 @@
     <Compile Include="IDTrackerService.Designer.cs">
       <DependentUpon>IDTrackerService.cs</DependentUpon>
     </Compile>
+    <Compile Include="Installer1.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Installer1.Designer.cs">
+      <DependentUpon>Installer1.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Models\CognexScanner.cs" />
     <Compile Include="Services\NamedPipeClient.cs" />
     <Compile Include="Services\NamedPipeServer.cs" />
+    <Compile Include="Services\Producer.cs" />
     <Compile Include="Utils\Singleton.cs" />
     <Compile Include="Utils\XmlFiles.cs" />
   </ItemGroup>
