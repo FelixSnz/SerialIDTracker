@@ -1,7 +1,8 @@
 ﻿using System;
 using System.IO.Pipes;
 using System.Text;
-using System.Threading;
+using NLog;
+using ILogger = NLog.ILogger;
 
 namespace SerialIDTracker.Services
 {
@@ -11,6 +12,7 @@ namespace SerialIDTracker.Services
 
     class NamedPipeServer
     {
+        private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
         private NamedPipeServerStream _pipeServer;
         private const string PipeName = "SerialTrackerService";
         private const int BufferSize = 4096;

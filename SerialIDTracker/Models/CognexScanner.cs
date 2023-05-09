@@ -1,7 +1,7 @@
 ﻿using Cognex.DataMan.SDK;
 using Cognex.DataMan.SDK.Discovery;
 using Cognex.DataMan.SDK.Utils;
-//using NLog;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +10,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SerialIDTracker.Utils;
+
+using NLog;
+using ILogger = NLog.ILogger;
+using NLog.Fluent;
 
 namespace SerialIDTracker.Models
 {
@@ -25,7 +29,7 @@ namespace SerialIDTracker.Models
 
         public event EventHandler<string> DataScanned;
 
-        //public static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
+        private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
 
 
@@ -49,17 +53,26 @@ namespace SerialIDTracker.Models
 
         private void ConnectByDiscoveredSystem(object systemInfo)
         {
-            if (systemInfo is EthSystemDiscoverer.SystemInfo ethSystemInfo)
+            try
             {
-                Singleton.Instance.Connector = new EthSystemConnector(ethSystemInfo.IPAddress, ethSystemInfo.Port);
-                (Singleton.Instance.Connector as EthSystemConnector).UserName = "admin";
-                (Singleton.Instance.Connector as EthSystemConnector).Password = ""; // Set the password here.
+                if (systemInfo is EthSystemDiscoverer.SystemInfo ethSystemInfo)
+                {
+                    Singleton.Instance.Connector = new EthSystemConnector(ethSystemInfo.IPAddress, ethSystemInfo.Port);
+                    (Singleton.Instance.Connector as EthSystemConnector).UserName = "admin";
+                    (Singleton.Instance.Connector as EthSystemConnector).Password = ""; // Set the password here.
+                }
+                else if (systemInfo is SerSystemDiscoverer.SystemInfo serSystemInfo)
+                {
+                    Singleton.Instance.Connector = new SerSystemConnector(serSystemInfo.PortName, serSystemInfo.Baudrate);
+                }
+                InitializeSystem();
+
             }
-            else if (systemInfo is SerSystemDiscoverer.SystemInfo serSystemInfo)
+            catch (Exception ex)
             {
-                Singleton.Instance.Connector = new SerSystemConnector(serSystemInfo.PortName, serSystemInfo.Baudrate);
+                Logger.Error(ex);
             }
-            InitializeSystem();
+            
 
 
         }
@@ -83,7 +96,7 @@ namespace SerialIDTracker.Models
         {
             _syncContext.Post(delegate
             {
-                Console.WriteLine($"Ethernet system discovered: {systemInfo.IPAddress}:{systemInfo.Port}");
+                Logger.Info($"Ethernet system discovered: {systemInfo.IPAddress}:{systemInfo.Port}");
                 ConnectByDiscoveredSystem(systemInfo);
             }, null);
         }
@@ -92,45 +105,49 @@ namespace SerialIDTracker.Models
         {
             _syncContext.Post(delegate
             {
-                Console.WriteLine($"Serial system discovered: {systemInfo.PortName}");
+                Logger.Info($"Serial system discovered: {systemInfo.PortName}");
                 ConnectByDiscoveredSystem(systemInfo);
             }, null);
         }
 
         public void InitializeSystem()
         {
-            if (Singleton.Instance.IsClosing || Singleton.Instance.System != null || Singleton.Instance.Connector == null)
-                return;
-
-            Singleton.Instance.System = new DataManSystem(Singleton.Instance.Connector);
-            Singleton.Instance.System.DefaultTimeout = 5000;
-
-            Singleton.Instance.System.SystemConnected += OnSystemConnected;
-            Singleton.Instance.System.SystemDisconnected += OnSystemDisconnected;
-            Singleton.Instance.System.AutomaticResponseArrived += AutomaticResponseArrived;
-
-            ResultTypes requestedResultTypes = ResultTypes.ReadXml;
-            _results = new ResultCollector(Singleton.Instance.System, requestedResultTypes);
-            _results.ComplexResultCompleted += Results_ComplexResultCompleted;
-            _results.SimpleResultDropped += Results_SimpleResultDropped;
-
-            Singleton.Instance.System.SetKeepAliveOptions(false, 3000, 1000);
-
-            Singleton.Instance.System.Connect();
-
             try
             {
+                if (Singleton.Instance.IsClosing || Singleton.Instance.System != null || Singleton.Instance.Connector == null)
+                    return;
+
+                Singleton.Instance.System = new DataManSystem(Singleton.Instance.Connector);
+                Singleton.Instance.System.DefaultTimeout = 5000;
+
+                Singleton.Instance.System.SystemConnected += OnSystemConnected;
+                Singleton.Instance.System.SystemDisconnected += OnSystemDisconnected;
+                Singleton.Instance.System.AutomaticResponseArrived += AutomaticResponseArrived;
+
+                ResultTypes requestedResultTypes = ResultTypes.ReadXml;
+                _results = new ResultCollector(Singleton.Instance.System, requestedResultTypes);
+                _results.ComplexResultCompleted += Results_ComplexResultCompleted;
+                _results.SimpleResultDropped += Results_SimpleResultDropped;
+
+                Singleton.Instance.System.SetKeepAliveOptions(false, 3000, 1000);
+
+                Singleton.Instance.System.Connect();
+
                 Singleton.Instance.System.SetResultTypes(requestedResultTypes);
             }
-            catch
-            { }
+            
+
+            catch (Exception ex)
+            {
+                Logger.Error(ex);
+            }
         }
 
         private static void OnSystemConnected(object sender, EventArgs e)
         {
             _syncContext.Post(delegate
             {
-                Console.WriteLine("System connected");
+                Logger.Info("System connected");
             }, null);
         }
 
@@ -138,9 +155,9 @@ namespace SerialIDTracker.Models
         {
             _syncContext.Post(delegate
             {
-                Console.WriteLine("System disconnected. Reason: " + e.ToString());
+                Logger.Info("System disconnected. Reason: " + e.ToString());
                 CleanupConnection();
-                Console.ReadKey();
+                
             }, null);
         }
 
@@ -148,7 +165,7 @@ namespace SerialIDTracker.Models
         {
             _syncContext.Post(delegate
             {
-                Console.WriteLine("Automatic response: " + e.Data.ToString());
+                Logger.Info("Automatic response: " + e.Data.ToString());
             }, null);
         }
 
@@ -164,7 +181,8 @@ namespace SerialIDTracker.Models
         {
             _syncContext.Post(delegate
             {
-                Console.WriteLine("Partial result dropped: {0}, id={1}", e.Id.Type.ToString(), e.Id.Id);
+                //TODO: also send partial data (as with complex data)
+                Logger.Info("Partial result dropped: {0}, id={1}", e.Id.Type.ToString(), e.Id.Id);
             }, null);
         }
 
@@ -204,8 +222,8 @@ namespace SerialIDTracker.Models
             if (readResult != null)
             {
                 DataScanned?.Invoke(this, readResult);
-                Console.WriteLine($"Complex result arrived: resultId = {resultId}, read result = {readResult}");
-                Console.WriteLine($"Complex result contains {collectedResults.ToString()}");
+                Logger.Info($"Complex result arrived: resultId = {resultId}, read result = {readResult}");
+                Logger.Info($"Complex result contains {collectedResults.ToString()}");
             }
         }
 
@@ -213,7 +231,7 @@ namespace SerialIDTracker.Models
 
         private static void CleanupConnection()
         {
-            Console.WriteLine("cleaning conn...");
+            Logger.Info("cleaning conn...");
             _ethSystemDiscoverer.Dispose();
             _ethSystemDiscoverer = null;
 

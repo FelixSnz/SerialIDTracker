@@ -8,13 +8,16 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Cognex.DataMan.SDK;
-using System.ComponentModel;
-using System.Configuration.Install;
+using NLog;
+
+using ILogger = NLog.ILogger;
+
 
 namespace SerialIDTracker
 {
     public partial class IdTrackerService : ServiceBase
     {
+        private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
         public IdTrackerService()
         {
@@ -23,6 +26,7 @@ namespace SerialIDTracker
 
         protected override void OnStart(string[] args)
         {
+            Logger.Info("service started");
             try
             {
                 SynchronizationContext _syncContext = SynchronizationContext.Current ?? new SynchronizationContext();
@@ -40,7 +44,7 @@ namespace SerialIDTracker
                     // If an IP address is provided as an argument, connect to that IP address.
                     string ipAddress = args[0];
                     int defaultPort = 23; // Replace 23 with the default port number for your device.
-                    Console.WriteLine($"Connecting to the specified IP address: {ipAddress}:{defaultPort}");
+                    Logger.Info($"Connecting to the specified IP address: {ipAddress}:{defaultPort}");
 
                     cognexScanner.ConnectByIp(ipAddress, defaultPort);
                 }
@@ -48,27 +52,25 @@ namespace SerialIDTracker
                 {
                     // If an IP address is not provided, use the existing discovery mechanism.
                     cognexScanner.DiscoverDevice();
-                    Console.WriteLine("Discovering systems. Press any key to exit...");
+                    Logger.Info("Discovering systems. Press any key to exit...");
                 }
 
-                Console.ReadKey();
             }
-
-            finally
+            catch (Exception ex)
             {
-                Singleton.Instance.IsClosing = true;
-
-
-                if (Singleton.Instance.System != null && Singleton.Instance.System.State == ConnectionState.Connected)
-                    Singleton.Instance.System.Disconnect();
-
+                Logger.Error(ex);
             }
+
 
         }
 
         protected override void OnStop()
         {
-            this.Stop();
+            Singleton.Instance.IsClosing = true;
+
+
+            if (Singleton.Instance.System != null && Singleton.Instance.System.State == ConnectionState.Connected)
+                Singleton.Instance.System.Disconnect();
         }
     }
 }

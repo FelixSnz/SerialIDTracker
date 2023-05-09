@@ -1,15 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Cognex.DataMan.SDK;
 using System.Xml;
+using NLog;
+using ILogger = NLog.ILogger;
 
 namespace SerialIDTracker.Utils
 {
     internal class XmlFiles
     {
+        private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
         public static string GetString(string resultXml)
         {
             try
@@ -39,8 +38,9 @@ namespace SerialIDTracker.Utils
                     return full_string_node.InnerText;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Error(ex);
             }
 
             return "";
