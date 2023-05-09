@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Windows;
 using System.ServiceProcess;
-
+using NLog;
+using ILogger = NLog.ILogger;
+using SysTrayApp.Services;
 
 namespace SysTrayApp
 {
@@ -13,6 +15,7 @@ namespace SysTrayApp
     public partial class MainWindow : Window
     {
 
+        private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
         private enum ServiceState
         {
             Stopped,
@@ -27,14 +30,21 @@ namespace SysTrayApp
         public MainWindow()
         {
             InitializeComponent();
-            Console.WriteLine("initializing ");
-            NamedPipeClient myclient = new NamedPipeClient();
-            //myclient.Connect();
+            Logger.Info("initializing ");
+            NamedPipeServer server = new NamedPipeServer();
+
+            server.DataReceived += OnDataReceived;
+            server.Start();
 
 
-            //_serviceController = new ServiceController("YourServiceName");
-            //UpdateServiceState();
+            _serviceController = new ServiceController("IdTrackerService");
+            UpdateServiceState();
             UpdateMenuItemsAvailability();
+        }
+
+        private void OnDataReceived(object sender, string data)
+        {
+            Console.WriteLine($"from systray: {data}");
         }
 
 
