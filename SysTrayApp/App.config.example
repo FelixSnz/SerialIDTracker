@@ -1,12 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
+<!-- This is just the default app.config file, because the original app.config file contains confidential data-->
 <configuration>
     <startup> 
         <supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.7.2" />
     </startup>
-	<appSettings>
-		<add key="OperationId" value="321" />
-		<add key="LineSegmentId" value="116" />
-		<add key="ProcessedBy" value="c" />
-		<add key="SimulationMode" value="on" />
-	</appSettings>
 </configuration>
